@@ -239,6 +239,19 @@ export default function Home() {
         <div className="ornate-divider max-w-md mx-auto my-2">
           <span>⚜</span>
         </div>
+
+        {/* 3D Game Quick Launch Link */}
+        <div className="mt-2 flex items-center justify-center gap-3">
+          <a
+            href="http://localhost:3000"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-serif font-bold uppercase tracking-widest text-gold-glow bg-obsidian-900/80 border border-gold-antique/50 rounded-full hover:border-gold-glow hover:bg-gold-antique/20 hover:scale-105 transition-all shadow-[0_0_12px_rgba(247,217,129,0.25)]"
+          >
+            <span>⚔️ PLAY 3D VANA PATH GAME</span>
+            <span className="text-[10px] text-emerald-400">● PORT 3000</span>
+          </a>
+        </div>
       </header>
 
       {/* LANGUAGE SELECTOR BAR */}

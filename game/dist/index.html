@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#07120e" />
+  <title>Vana Path — Grove of Ash</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800;900&family=Karla:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --gold-glow: #f7d981;
+      --gold-antique: #d69b3b;
+      --gold-dark: #7a541c;
+      --emerald-dark: #071710;
+      --emerald-glow: #8ae26b;
+      --obsidian-bg: #040d09;
+      --blood-red: #e24a36;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-user-select: none; -moz-user-select: none; user-select: none; }
+    body { width: 100vw; height: 100vh; overflow: hidden; background: #07120e; color: #edf7cd; font-family: Karla, system-ui, sans-serif; }
+    #game-container { position: fixed; inset: 0; z-index: 0; }
+    canvas { display: block; width: 100% !important; height: 100% !important; }
+    #game-ui { position: fixed; inset: 0; z-index: 2; pointer-events: none; text-shadow: 0 2px 5px rgba(0, 0, 0, .8); }
+
+    .frame-corner { position: absolute; width: 92px; opacity: .74; filter: drop-shadow(0 0 10px rgba(228, 169, 62, .26)); pointer-events: none; }
+    .frame-corner.tl { top: 10px; left: 10px; }
+    .frame-corner.tr { top: 10px; right: 10px; transform: scaleX(-1); }
+    .frame-corner.bl { bottom: 10px; left: 10px; transform: scaleY(-1); }
+    .frame-corner.br { bottom: 10px; right: 10px; transform: scale(-1); }
+
+    /* Top Chapter Header */
+    .chapter { position: absolute; top: 21px; left: 50%; transform: translateX(-50%); width: min(540px, calc(100vw - 230px)); text-align: center; }
+    .chapter__eyebrow { color: #b4d27a; font: 700 10px/1 Cinzel, Georgia, serif; letter-spacing: 3.2px; }
+    .chapter__title { margin-top: 7px; color: var(--gold-glow); font: 900 clamp(20px, 2.25vw, 30px)/1 Cinzel, Georgia, serif; letter-spacing: 5px; filter: drop-shadow(0 0 13px rgba(245, 185, 61, .35)); }
+    .chapter__rule { height: 1px; width: 72%; margin: 10px auto 0; background: linear-gradient(90deg, transparent, #d69b3b, transparent); }
+
+    /* Top Right HUD Utility Bar */
+    .hud-top-right {
+      position: absolute;
+      top: 24px;
+      right: 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+      z-index: 5;
+    }
+    .hud-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid rgba(214, 155, 59, 0.45);
+      background: rgba(7, 23, 16, 0.85);
+      color: var(--gold-glow);
+      font-size: 16px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 0 8px rgba(214, 155, 59, 0.15);
+      transition: all 0.2s ease;
+    }
+    .hud-btn:hover {
+      border-color: var(--gold-glow);
+      transform: scale(1.08);
+      box-shadow: 0 0 15px rgba(245, 185, 61, 0.4), inset 0 0 12px rgba(245, 185, 61, 0.3);
+    }
+    .hud-btn:active {
+      transform: scale(0.95);
+    }
+    .hud-btn.is-muted {
+      border-color: rgba(226, 74, 54, 0.6);
+      color: #ff7a6b;
+    }
+
+    /* Player Status Panel */
+    .player-panel { position: absolute; top: 26px; left: 28px; width: min(260px, 28vw); }
+    .panel-label { display: flex; justify-content: space-between; margin: 0 3px 6px; color: #f5e6bb; font: 700 11px/1 Cinzel, Georgia, serif; letter-spacing: 1.8px; }
+    .health-track, .xp-track, .boss-track { overflow: hidden; border: 1px solid rgba(214, 192, 115, .58); background: rgba(4, 14, 9, .72); box-shadow: inset 0 1px 8px rgba(0, 0, 0, .75); }
+    .health-track { height: 16px; border-radius: 3px; padding: 2px; }
+    .health-fill { height: 100%; width: 100%; border-radius: 1px; background: linear-gradient(90deg, #a52432, #e95746 55%, #ffd177); box-shadow: 0 0 13px rgba(226, 75, 65, .62); transition: width .15s ease-out; }
+    .xp-row { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+    .xp-track { flex: 1; height: 5px; border-radius: 3px; border-color: rgba(155, 231, 132, .42); }
+    .xp-fill { height: 100%; width: 0; background: linear-gradient(90deg, #8ae26b, #e7ff92); box-shadow: 0 0 8px #a9f278; transition: width .2s ease; }
+    #level-text { color: #c8e88c; white-space: nowrap; font: 800 9px/1 Cinzel, Georgia, serif; letter-spacing: 1px; }
+
+    /* Objective */
+    .objective { position: absolute; top: 104px; left: 28px; width: min(310px, 33vw); padding-left: 13px; border-left: 2px solid #d99c3b; }
+    .objective__label { color: #d8a64a; font: 800 9px/1 Cinzel, Georgia, serif; letter-spacing: 2.3px; }
+    #quest-title { margin-top: 5px; color: #fff0bd; font: 700 12px/1.25 Cinzel, Georgia, serif; letter-spacing: .8px; }
+    #quest-detail { margin-top: 4px; color: #bdd4a2; font: 600 12px/1.3 Karla, sans-serif; }
+
+    /* Boss Panel */
+    .boss-panel { position: absolute; left: 50%; top: 101px; width: min(430px, 55vw); transform: translate(-50%, -10px); opacity: 0; transition: opacity .3s ease, transform .3s ease; text-align: center; }
+    .boss-panel.is-visible { opacity: 1; transform: translate(-50%, 0); }
+    #boss-name { color: #ffc46a; font: 800 12px/1 Cinzel, Georgia, serif; letter-spacing: 2px; }
+    .boss-track { height: 8px; margin-top: 7px; padding: 1px; border-color: rgba(255, 157, 81, .74); }
+    .boss-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #8b2130, #e24a36, #ffbc58); box-shadow: 0 0 10px rgba(228, 85, 58, .8); transition: width .14s ease-out; }
+
+    /* Abilities */
+    .abilities { position: absolute; right: 28px; bottom: 28px; display: flex; align-items: end; gap: 10px; }
+    .ability { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 65px; }
+    .ability-key { --cooldown: 0%; position: relative; display: grid; place-items: center; width: 45px; height: 45px; overflow: hidden; border: 1px solid #6b8e58; border-radius: 50%; background: conic-gradient(from 180deg, rgba(54, 77, 46, .9) var(--cooldown), rgba(16, 42, 26, .91) 0); color: #c9d9a9; font: 800 14px/1 Cinzel, Georgia, serif; box-shadow: 0 0 0 3px rgba(7, 18, 14, .45), inset 0 0 12px rgba(0, 0, 0, .5); }
+    .ability-key.is-ready { border-color: #e9c661; color: #fff0aa; box-shadow: 0 0 12px rgba(225, 202, 92, .3), 0 0 0 3px rgba(7, 18, 14, .45), inset 0 0 12px rgba(244, 195, 80, .12); }
+    .ability-label { color: #e3edc0; font: 700 9px/1 Cinzel, Georgia, serif; letter-spacing: 1px; text-align: center; white-space: nowrap; }
+
+    /* Bottom Controls */
+    .controls { position: absolute; left: 50%; bottom: 25px; transform: translateX(-50%); display: flex; align-items: center; gap: 13px; padding: 9px 15px; border: 1px solid rgba(127, 156, 88, .46); border-radius: 3px; background: rgba(6, 20, 12, .73); color: #d0deb4; font: 700 10px/1 Karla, sans-serif; letter-spacing: .7px; white-space: nowrap; box-shadow: 0 5px 17px rgba(0, 0, 0, .42); }
+    kbd { display: inline-grid; min-width: 17px; height: 17px; margin: 0 2px; place-items: center; border: 1px solid #90ad68; border-bottom-color: #40522f; border-radius: 2px; background: #1c3621; color: #fff1bd; font: 800 9px/1 Karla, sans-serif; }
+    .control-separator { color: #9b763d; }
+
+    .notification { position: absolute; left: 50%; bottom: 82px; max-width: min(530px, 80vw); transform: translate(-50%, 8px); opacity: 0; color: #fff0bd; font: 700 13px/1.4 Cinzel, Georgia, serif; letter-spacing: .5px; text-align: center; transition: opacity .22s ease, transform .22s ease; }
+    .notification.is-visible { transform: translate(-50%, 0); opacity: 1; }
+
+    /* Floating Damage Numbers */
+    .damage-floater {
+      position: absolute;
+      font: 900 16px/1 Cinzel, Georgia, serif;
+      letter-spacing: 1px;
+      pointer-events: none;
+      text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 2px 4px #000;
+      animation: floatUpFade 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      transform: translate(-50%, -50%);
+    }
+    .damage-floater.is-crit {
+      font-size: 22px;
+      text-shadow: 0 0 12px rgba(255, 140, 0, 0.8), 0 0 20px rgba(255, 60, 0, 0.5);
+    }
+    @keyframes floatUpFade {
+      0% { opacity: 0; transform: translate(-50%, 5px) scale(0.7); }
+      20% { opacity: 1; transform: translate(-50%, -10px) scale(1.15); }
+      100% { opacity: 0; transform: translate(-50%, -45px) scale(0.9); }
+    }
+
+    /* ========================================================
+       THEMATIC LOADING SCREEN
+       ======================================================== */
+    .loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: radial-gradient(circle at center, #0c2016 0%, #030806 85%, #000000 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: #fff;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .loading-screen.is-fading {
+      opacity: 0;
+      transform: scale(1.03);
+      pointer-events: none;
+    }
+    .loading-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: min(580px, 92vw);
+      padding: 40px 32px;
+      border: 1px solid rgba(214, 155, 59, 0.3);
+      background: rgba(6, 18, 12, 0.82);
+      border-radius: 8px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(214, 155, 59, 0.12);
+      text-align: center;
+    }
+    .loading-mandala-wrap {
+      position: relative;
+      width: 110px;
+      height: 110px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 18px;
+    }
+    .loading-mandala {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      -o-object-fit: contain;
+         object-fit: contain;
+      filter: drop-shadow(0 0 14px rgba(247, 217, 129, 0.45));
+      animation: spinMandala 28s linear infinite;
+    }
+    .loading-om {
+      font-size: 32px;
+      color: var(--gold-glow);
+      font-family: Cinzel, serif;
+      filter: drop-shadow(0 0 8px rgba(247, 217, 129, 0.7));
+      animation: pulseOm 3s ease-in-out infinite;
+    }
+    @keyframes spinMandala {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulseOm {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.1); opacity: 1; filter: drop-shadow(0 0 16px rgba(247, 217, 129, 0.9)); }
+    }
+    .loading-eyebrow {
+      color: #9cd48b;
+      font: 800 11px/1 Cinzel, Georgia, serif;
+      letter-spacing: 3.5px;
+      margin-bottom: 6px;
+    }
+    .loading-title {
+      font: 900 clamp(28px, 4vw, 44px)/1.1 Cinzel, Georgia, serif;
+      letter-spacing: 7px;
+      color: var(--gold-glow);
+      background: linear-gradient(180deg, #fff7d1 0%, #f7d981 40%, #c99335 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 15px rgba(247, 217, 129, 0.4));
+      margin-bottom: 6px;
+    }
+    .loading-subtitle {
+      font: 700 12px/1 Karla, sans-serif;
+      letter-spacing: 3px;
+      color: #c0d8aa;
+      margin-bottom: 28px;
+    }
+    .loading-progress-container {
+      width: 100%;
+      max-width: 420px;
+      margin-bottom: 20px;
+      transition: opacity 0.3s ease;
+    }
+    .loading-status-row {
+      display: flex;
+      justify-content: space-between;
+      color: #c9dbb8;
+      font: 700 11px/1 Cinzel, serif;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .loading-track {
+      height: 8px;
+      width: 100%;
+      border-radius: 4px;
+      background: rgba(3, 10, 7, 0.8);
+      border: 1px solid rgba(214, 155, 59, 0.4);
+      overflow: hidden;
+      padding: 1px;
+    }
+    .loading-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #388e3c, #8ae26b 50%, #f7d981);
+      box-shadow: 0 0 12px rgba(138, 226, 107, 0.8);
+      transition: width 0.15s ease-out;
+    }
+    .loading-start-btn {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 44px;
+      background: linear-gradient(180deg, #244b30 0%, #102619 100%);
+      border: 2px solid var(--gold-glow);
+      border-radius: 4px;
+      color: #fff6d6;
+      cursor: pointer;
+      box-shadow: 0 0 25px rgba(247, 217, 129, 0.35), inset 0 0 15px rgba(247, 217, 129, 0.2);
+      transition: all 0.25s ease;
+      animation: startBtnPulse 2.4s ease-in-out infinite;
+      overflow: hidden;
+    }
+    .loading-start-btn.is-hidden {
+      display: none;
+    }
+    .loading-start-btn:hover {
+      transform: translateY(-2px) scale(1.03);
+      border-color: #fff;
+      box-shadow: 0 0 35px rgba(247, 217, 129, 0.6), inset 0 0 20px rgba(247, 217, 129, 0.35);
+    }
+    .loading-start-btn .btn-text {
+      font: 900 16px/1 Cinzel, Georgia, serif;
+      letter-spacing: 3.5px;
+      color: #fff4ca;
+      text-shadow: 0 0 10px rgba(247, 217, 129, 0.7);
+    }
+    .loading-start-btn .btn-subtext {
+      font: 600 10px/1 Karla, sans-serif;
+      letter-spacing: 1.5px;
+      color: #bcdbaa;
+      margin-top: 5px;
+    }
+    @keyframes startBtnPulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(247, 217, 129, 0.3), inset 0 0 12px rgba(247, 217, 129, 0.15); }
+      50% { box-shadow: 0 0 36px rgba(247, 217, 129, 0.65), inset 0 0 20px rgba(247, 217, 129, 0.3); }
+    }
+    .loading-lore-card {
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(214, 155, 59, 0.2);
+      max-width: 440px;
+    }
+    .lore-icon {
+      color: var(--gold-antique);
+      font-size: 13px;
+      margin-bottom: 6px;
+      display: inline-block;
+    }
+    .loading-lore-text {
+      color: #bcd4a8;
+      font: 600 12px/1.45 Cinzel, Georgia, serif;
+      letter-spacing: 0.6px;
+      transition: opacity 0.3s ease;
+    }
+
+    /* ========================================================
+       PAUSE MENU OVERLAY
+       ======================================================== */
+    .pause-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s ease;
+    }
+    .pause-overlay.is-hidden {
+      display: none;
+    }
+    .pause-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(3, 10, 7, 0.75);
+      backdrop-filter: blur(10px);
+    }
+    .pause-card {
+      position: relative;
+      z-index: 2;
+      width: min(440px, 90vw);
+      padding: 36px 28px;
+      border: 1px solid rgba(214, 155, 59, 0.45);
+      border-radius: 8px;
+      background: radial-gradient(circle at top, #0f2b1d 0%, #06150e 70%, #030a07 100%);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(214, 155, 59, 0.2);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .card-crest {
+      color: var(--gold-glow);
+      font-size: 16px;
+      margin-bottom: 6px;
+      letter-spacing: 3px;
+    }
+    .pause-title {
+      font: 900 28px/1 Cinzel, Georgia, serif;
+      letter-spacing: 5px;
+      color: var(--gold-glow);
+      text-shadow: 0 0 15px rgba(247, 217, 129, 0.4);
+    }
+    .pause-subtitle {
+      font: 700 11px/1 Karla, sans-serif;
+      letter-spacing: 2px;
+      color: #9cb886;
+      margin-top: 5px;
+    }
+    .gold-divider {
+      width: 70%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #d69b3b, transparent);
+      margin: 18px 0;
+    }
+    .pause-audio-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      background: rgba(4, 14, 9, 0.75);
+      border: 1px solid rgba(214, 155, 59, 0.25);
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-bottom: 20px;
+    }
+    .pause-quick-btn {
+      background: none;
+      border: 1px solid rgba(214, 155, 59, 0.4);
+      color: var(--gold-glow);
+      font: 700 10px/1 Cinzel, serif;
+      letter-spacing: 1px;
+      padding: 6px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .pause-quick-btn:hover {
+      background: rgba(214, 155, 59, 0.2);
+    }
+    .pause-quick-btn.is-muted {
+      border-color: #e24a36;
+      color: #ff8573;
+    }
+    .pause-slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      max-width: 170px;
+      margin-left: 10px;
+    }
+    .slider-icon {
+      font-size: 12px;
+    }
+    .pause-slider-wrap input[type="range"] {
+      flex: 1;
+      accent-color: #f7d981;
+      height: 4px;
+      cursor: pointer;
+    }
+    .pause-menu-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+    .pause-action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 20px;
+      border: 1px solid rgba(214, 155, 59, 0.4);
+      border-radius: 4px;
+      background: rgba(8, 26, 17, 0.7);
+      color: #edf7cd;
+      font: 800 13px/1 Cinzel, Georgia, serif;
+      letter-spacing: 2px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      transition: all 0.2s ease;
+    }
+    .pause-action-btn:hover {
+      border-color: var(--gold-glow);
+      background: rgba(18, 52, 35, 0.85);
+      color: #fff;
+      transform: translateX(3px);
+      box-shadow: 0 0 15px rgba(247, 217, 129, 0.25);
+    }
+    .pause-action-btn.primary {
+      border-color: var(--gold-glow);
+      background: linear-gradient(90deg, rgba(32, 77, 49, 0.9), rgba(16, 44, 28, 0.9));
+      color: #fff4cb;
+    }
+    .pause-action-btn.danger:hover {
+      border-color: #e24a36;
+      background: rgba(70, 18, 14, 0.8);
+      color: #ffaba0;
+    }
+    .pause-action-btn .key-hint {
+      font-size: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid rgba(214, 155, 59, 0.3);
+      color: var(--gold-glow);
+    }
+    .pause-controls-preview {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 22px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(214, 155, 59, 0.18);
+      font: 600 10px/1 Karla, sans-serif;
+      color: #9cb48a;
+    }
+    .pause-controls-preview b {
+      color: #f7d981;
+    }
+
+    /* ========================================================
+       SACRED SETTINGS MODAL
+       ======================================================== */
+    .settings-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s ease;
+    }
+    .settings-modal.is-hidden {
+      display: none;
+    }
+    .settings-modal.is-fading-out {
+      opacity: 0;
+    }
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(2, 8, 5, 0.85);
+      backdrop-filter: blur(12px);
+    }
+    .settings-card {
+      position: relative;
+      z-index: 2;
+      width: min(560px, 94vw);
+      max-height: 90vh;
+      border: 1px solid rgba(214, 155, 59, 0.5);
+      border-radius: 8px;
+      background: radial-gradient(circle at top center, #113322 0%, #071911 60%, #030c08 100%);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9), 0 0 40px rgba(214, 155, 59, 0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .settings-header {
+      padding: 24px 24px 16px;
+      text-align: center;
+      border-bottom: 1px solid rgba(214, 155, 59, 0.25);
+    }
+    .header-crest {
+      color: var(--gold-glow);
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .settings-title {
+      font: 900 24px/1 Cinzel, Georgia, serif;
+      letter-spacing: 4px;
+      color: var(--gold-glow);
+    }
+    .settings-subtitle {
+      font: 700 10px/1 Karla, sans-serif;
+      letter-spacing: 2.2px;
+      color: #9cb886;
+      margin-top: 4px;
+    }
+    .settings-tabs {
+      display: flex;
+      border-bottom: 1px solid rgba(214, 155, 59, 0.2);
+      background: rgba(4, 14, 9, 0.5);
+    }
+    .settings-tab-btn {
+      flex: 1;
+      padding: 12px 6px;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: #b0c99a;
+      font: 800 11px/1 Cinzel, serif;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .settings-tab-btn:hover {
+      color: #fff;
+      background: rgba(214, 155, 59, 0.08);
+    }
+    .settings-tab-btn.is-active {
+      color: var(--gold-glow);
+      border-bottom-color: var(--gold-glow);
+      background: rgba(214, 155, 59, 0.12);
+    }
+    .settings-body {
+      padding: 20px 24px;
+      overflow-y: auto;
+      max-height: 52vh;
+    }
+    .settings-tab-pane {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .settings-tab-pane.is-active {
+      display: flex;
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 10px 14px;
+      background: rgba(5, 17, 11, 0.6);
+      border: 1px solid rgba(214, 155, 59, 0.16);
+      border-radius: 4px;
+    }
+    .setting-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .setting-label {
+      font: 700 12px/1 Cinzel, serif;
+      letter-spacing: 1px;
+      color: #fff2c4;
+    }
+    .setting-desc {
+      font: 500 11px/1.2 Karla, sans-serif;
+      color: #9cb888;
+    }
+    .slider-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 170px;
+    }
+    .slider-control input[type="range"] {
+      flex: 1;
+      accent-color: #f7d981;
+      height: 5px;
+      cursor: pointer;
+    }
+    .slider-badge {
+      font: 800 11px/1 Cinzel, serif;
+      color: var(--gold-glow);
+      min-width: 38px;
+      text-align: right;
+    }
+    .select-control {
+      padding: 6px 12px;
+      background: #092115;
+      border: 1px solid rgba(214, 155, 59, 0.4);
+      border-radius: 4px;
+      color: #fff0be;
+      font: 600 12px/1 Karla, sans-serif;
+      outline: none;
+      cursor: pointer;
+    }
+    .settings-sub-btn {
+      padding: 7px 14px;
+      background: rgba(18, 50, 32, 0.8);
+      border: 1px solid rgba(214, 155, 59, 0.4);
+      border-radius: 3px;
+      color: var(--gold-glow);
+      font: 800 10px/1 Cinzel, serif;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .settings-sub-btn:hover {
+      border-color: var(--gold-glow);
+      background: rgba(30, 80, 52, 0.9);
+      color: #fff;
+    }
+
+    /* Custom Toggle Switch */
+    .toggle-control {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .toggle-control input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #12281c;
+      border: 1px solid rgba(214, 155, 59, 0.35);
+      border-radius: 22px;
+      transition: .25s;
+    }
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #8da47f;
+      border-radius: 50%;
+      transition: .25s;
+    }
+    .toggle-control input:checked + .toggle-slider {
+      background-color: #245738;
+      border-color: var(--gold-glow);
+    }
+    .toggle-control input:checked + .toggle-slider:before {
+      transform: translateX(22px);
+      background-color: var(--gold-glow);
+      box-shadow: 0 0 8px #f7d981;
+    }
+
+    /* Controls Grid */
+    .controls-guide-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .guide-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: rgba(4, 16, 10, 0.7);
+      border: 1px solid rgba(214, 155, 59, 0.2);
+      border-radius: 4px;
+      font: 600 11px/1 Karla, sans-serif;
+      color: #d6e8c0;
+    }
+
+    .settings-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 24px;
+      border-top: 1px solid rgba(214, 155, 59, 0.25);
+      background: rgba(3, 10, 7, 0.6);
+    }
+    .settings-btn-secondary {
+      padding: 9px 18px;
+      background: none;
+      border: 1px solid rgba(214, 155, 59, 0.3);
+      color: #b0c99a;
+      border-radius: 4px;
+      font: 800 11px/1 Cinzel, serif;
+      letter-spacing: 1.2px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .settings-btn-secondary:hover {
+      border-color: #e24a36;
+      color: #ff9185;
+    }
+    .settings-btn-primary {
+      padding: 9px 24px;
+      background: linear-gradient(180deg, #244b30 0%, #122b1c 100%);
+      border: 1px solid var(--gold-glow);
+      color: #fff4cb;
+      border-radius: 4px;
+      font: 800 11px/1 Cinzel, serif;
+      letter-spacing: 1.5px;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(247, 217, 129, 0.25);
+      transition: all 0.2s ease;
+    }
+    .settings-btn-primary:hover {
+      border-color: #fff;
+      box-shadow: 0 0 20px rgba(247, 217, 129, 0.45);
+      transform: translateY(-1px);
+    }
+
+    @media (max-width: 700px) {
+      .frame-corner { width: 62px; }
+      .chapter { top: 17px; }
+      .chapter__title { letter-spacing: 3px; }
+      .player-panel { top: 76px; left: 17px; width: 190px; }
+      .objective { top: 142px; left: 17px; width: 245px; }
+      .boss-panel { top: 75px; }
+      .controls { display: none; }
+      .abilities { right: 16px; bottom: 16px; }
+      .notification { bottom: 82px; font-size: 11px; }
+      #quest-detail { font-size: 11px; }
+      .hud-top-right { top: 16px; right: 16px; }
+      .controls-guide-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+  <script type="module" crossorigin src="/assets/index-BQvSS9M0.js"></script>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <!-- MAIN HUD -->
+  <main id="game-ui" aria-label="Vana Path game HUD">
+    <img src="/images/SimpleAssets/ui/corner-top-left.png" class="frame-corner tl" alt="" />
+    <img src="/images/SimpleAssets/ui/corner-top-left.png" class="frame-corner tr" alt="" />
+    <img src="/images/SimpleAssets/ui/corner-top-left.png" class="frame-corner bl" alt="" />
+    <img src="/images/SimpleAssets/ui/corner-top-left.png" class="frame-corner br" alt="" />
+
+    <!-- Top Right Quick Utility Buttons -->
+    <div id="hud-top-right" class="hud-top-right" aria-label="Game utilities">
+      <button id="hud-sound-btn" class="hud-btn" title="Toggle Sound (M)" aria-label="Toggle Sound">🔊</button>
+      <button id="hud-pause-btn" class="hud-btn" title="Pause Game (ESC / P)" aria-label="Pause Game">⏸</button>
+      <button id="hud-settings-btn" class="hud-btn" title="Settings" aria-label="Settings">⚙️</button>
+    </div>
+
+    <header class="chapter">
+      <p class="chapter__eyebrow">CHAPTER I · THE VANDEVATA GROVE</p>
+      <h1 class="chapter__title">VANA PATH</h1>
+      <div class="chapter__rule"></div>
+    </header>
+
+    <section class="player-panel" aria-label="Player vitality">
+      <div class="panel-label"><span>VITALITY</span><span id="health-text">100 / 100</span></div>
+      <div class="health-track"><div id="health-fill" class="health-fill"></div></div>
+      <div class="xp-row"><div class="xp-track"><div id="xp-fill" class="xp-fill"></div></div><span id="level-text">LEVEL 1</span></div>
+    </section>
+
+    <section class="objective" aria-label="Quest objective">
+      <p class="objective__label">CURRENT RITE</p>
+      <p id="quest-title">CLEANSE THE OUTER GROVE</p>
+      <p id="quest-detail">5 corruption remain in the grove</p>
+    </section>
+
+    <section id="boss-panel" class="boss-panel" aria-label="Boss vitality">
+      <p id="boss-name">KAALVAN, GROVE WARDEN</p>
+      <div class="boss-track"><div id="boss-fill" class="boss-fill"></div></div>
+    </section>
+
+    <div id="notification" class="notification" role="status" aria-live="polite"></div>
+
+    <section class="abilities" aria-label="Abilities">
+      <div class="ability"><div id="dash-key" class="ability-key is-ready">⇧</div><span id="dash-label" class="ability-label">DASH</span></div>
+      <div class="ability"><div id="pulse-key" class="ability-key is-ready">E</div><span id="pulse-label" class="ability-label">PRANA PULSE</span></div>
+    </section>
+
+    <div class="controls" aria-label="Controls">
+      <span>MOVE <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
+      <i class="control-separator">◆</i>
+      <span>JUMP <kbd>SPACE</kbd></span>
+      <i class="control-separator">◆</i>
+      <span>STRIKE <kbd>CLICK</kbd> / <kbd>J</kbd></span>
+      <i class="control-separator">◆</i>
+      <span>BLOCK <kbd>Q</kbd> / <kbd>R-CLICK</kbd></span>
+      <i class="control-separator">◆</i>
+      <span>DASH <kbd>SHIFT</kbd></span>
+      <i class="control-separator">◆</i>
+      <span>PULSE <kbd>E</kbd></span>
+      <i class="control-separator">◆</i>
+      <span>SLIDE <kbd>C</kbd></span>
+    </div>
+  </main>
+
+  <!-- THEMATIC LOADING SCREEN -->
+  <div id="loading-screen" class="loading-screen" role="dialog" aria-modal="true" aria-label="Loading Vana Path">
+    <div class="loading-card">
+      <div class="loading-mandala-wrap">
+        <img src="/images/SimpleAssets/ui/mandala-circle.png" class="loading-mandala" alt="Sacred Mandala" />
+        <div class="loading-om">ॐ</div>
+      </div>
+      <p class="loading-eyebrow">VANDEVATA CHRONICLES · वनपथ</p>
+      <h1 class="loading-title">VANA PATH</h1>
+      <p class="loading-subtitle">THE GROVE OF ASH · भस्मवनम्</p>
+
+      <div id="loading-progress-container" class="loading-progress-container">
+        <div class="loading-status-row">
+          <span id="loading-status-text">Awakening the Sacred Grove...</span>
+          <span id="loading-progress-text">0%</span>
+        </div>
+        <div class="loading-track">
+          <div id="loading-progress-bar" class="loading-fill"></div>
+        </div>
+      </div>
+
+      <button id="loading-start-btn" class="loading-start-btn is-hidden" aria-label="Enter the Grove">
+        <span class="btn-text">ENTER THE GROVE</span>
+        <span class="btn-subtext">Click or Press SPACE to Begin Rite</span>
+      </button>
+
+      <div class="loading-lore-card">
+        <span class="lore-icon">⚜</span>
+        <p id="loading-lore-text" class="loading-lore-text">“The Trishul spear commands the trinity of existence: creation, preservation, and cosmic resolve.”</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAUSE MENU OVERLAY -->
+  <div id="pause-overlay" class="pause-overlay is-hidden" role="dialog" aria-modal="true" aria-label="Game Paused">
+    <div class="pause-backdrop"></div>
+    <div class="pause-card">
+      <div class="card-crest">❖ ॐ ❖</div>
+      <h2 class="pause-title">RITE PAUSED</h2>
+      <p class="pause-subtitle">लङ्का ध्यानम् · GROVE IN SUSPENSION</p>
+      <div class="gold-divider"></div>
+
+      <!-- Quick Audio Row -->
+      <div class="pause-audio-bar">
+        <button id="pause-quick-mute" class="pause-quick-btn" title="Toggle Mute (M)">🔊 SOUND ON</button>
+        <div class="pause-slider-wrap">
+          <span class="slider-icon">🔉</span>
+          <input type="range" id="pause-quick-vol" min="0" max="1" step="0.05" value="0.8" aria-label="Master Volume" />
+          <span class="slider-icon">🔊</span>
+        </div>
+      </div>
+
+      <div class="pause-menu-actions">
+        <button id="pause-resume-btn" class="pause-action-btn primary">
+          <span>RESUME JOURNEY</span>
+          <kbd class="key-hint">ESC / P</kbd>
+        </button>
+        <button id="pause-settings-btn" class="pause-action-btn">
+          <span>SETTINGS & SOUND</span>
+          <span class="btn-icon">⚙️</span>
+        </button>
+        <button id="pause-restart-btn" class="pause-action-btn danger">
+          <span>RESTART ENCOUNTER</span>
+          <kbd class="key-hint">R</kbd>
+        </button>
+      </div>
+
+      <div class="pause-controls-preview">
+        <span><b>WASD</b> Move</span>
+        <span><b>SPACE</b> Jump</span>
+        <span><b>CLICK / J</b> Strike Combos</span>
+        <span><b>Q / R-CLICK</b> Block (-75% dmg)</span>
+        <span><b>SHIFT</b> Dash</span>
+        <span><b>E</b> Prana Pulse</span>
+        <span><b>C</b> Slide</span>
+        <span><b>F</b> Punch</span>
+        <span><b>V</b> Cheer Emote</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SACRED SETTINGS MODAL -->
+  <div id="settings-modal" class="settings-modal is-hidden" role="dialog" aria-modal="true" aria-label="Settings Modal">
+    <div class="modal-backdrop"></div>
+    <div class="settings-card">
+      <header class="settings-header">
+        <div class="header-crest">⚜ ॐ ⚜</div>
+        <h2 class="settings-title">SACRED SETTINGS</h2>
+        <p class="settings-subtitle">CUSTOMIZE REALM HARMONY & CONTROLS</p>
+      </header>
+
+      <!-- Tabs Navigation -->
+      <nav class="settings-tabs" aria-label="Settings navigation">
+        <button class="settings-tab-btn is-active" data-tab="audio">AUDIO</button>
+        <button class="settings-tab-btn" data-tab="graphics">GRAPHICS</button>
+        <button class="settings-tab-btn" data-tab="gameplay">GAMEPLAY</button>
+        <button class="settings-tab-btn" data-tab="controls">CONTROLS</button>
+      </nav>
+
+      <!-- Panes -->
+      <div class="settings-body">
+        <!-- Audio Tab -->
+        <section id="tab-audio" class="settings-tab-pane is-active">
+          <div class="setting-row">
+            <div class="setting-info">
+              <label for="setting-master-vol" class="setting-label">Master Volume</label>
+              <span class="setting-desc">Overall sound balance</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="setting-master-vol" min="0" max="1" step="0.05" value="0.8" />
+              <span id="setting-master-val" class="slider-badge">80%</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label for="setting-music-vol" class="setting-label">Music Volume (BGM)</label>
+              <span class="setting-desc">Epic orchestral hymns & chants</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="setting-music-vol" min="0" max="1" step="0.05" value="0.65" />
+              <span id="setting-music-val" class="slider-badge">65%</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label for="setting-sfx-vol" class="setting-label">Sound Effects (SFX)</label>
+              <span class="setting-desc">Trishul slashes, impacts, dashes & pulse</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="setting-sfx-vol" min="0" max="1" step="0.05" value="0.85" />
+              <span id="setting-sfx-val" class="slider-badge">85%</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label for="setting-music-track" class="setting-label">Soundtrack Theme</label>
+              <span class="setting-desc">Select active background music</span>
+            </div>
+            <select id="setting-music-track" class="select-control">
+              <option value="bhoomiya">Bhoomiya Rakshaka (Epic Battle)</option>
+              <option value="sitaram">Sitaram Kalyanam (Divine Hymn)</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label for="setting-mute" class="setting-label">Mute All Audio</label>
+              <span class="setting-desc">Instantly silence music and sound effects (Key: M)</span>
+            </div>
+            <label class="toggle-control">
+              <input type="checkbox" id="setting-mute" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </section>
+
+        <!-- Graphics Tab -->
+        <section id="tab-graphics" class="settings-tab-pane">
+          <div class="setting-row">
+            <div class="setting-info">
+              <label for="setting-quality" class="setting-label">Visual Fidelity Preset</label>
+              <span class="setting-desc">Controls shadow maps, rendering resolution & detail</span>
+            </div>
+            <select id="setting-quality" class="select-control">
+              <option value="low">Low (Performance Boost)</option>
+              <option value="medium">Medium (Standard)</option>
+              <option value="high" selected>High (Rich Shadows)</option>
+              <option value="ultra">Ultra (Cinematic Native)</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label for="setting-fog-enable" class="setting-label">Atmospheric Jungle Fog</label>
+              <span class="setting-desc">Dense humid morning mist across canopy</span>
+            </div>
+            <label class="toggle-control">
+              <input type="checkbox" id="setting-fog-enable" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label for="setting-fog-density" class="setting-label">Fog Density</label>
+              <span class="setting-desc">Thickness of environmental haze</span>
+            </div>
+            <div class="slider-control">
+              <input type="range" id="setting-fog-density" min="0.01" max="0.06" step="0.005" value="0.027" />
+              <span id="setting-fog-val" class="slider-badge">0.027</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label for="setting-screen-shake" class="setting-label">Combat Screen Shake</label>
+              <span class="setting-desc">Camera impacts on heavy strikes and boss roars</span>
+            </div>
+            <label class="toggle-control">
+              <input type="checkbox" id="setting-screen-shake" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-label">Display Mode</label>
+              <span class="setting-desc">Toggle fullscreen view</span>
+            </div>
+            <button id="setting-fullscreen-btn" class="settings-sub-btn">TOGGLE FULLSCREEN</button>
+          </div>
+        </section>
+
+        <!-- Gameplay Tab -->
+        <section id="tab-gameplay" class="settings-tab-pane">
+          <div class="setting-row">
+            <div class="setting-info">
+              <label for="setting-camera-distance" class="setting-label">Camera Perspective</label>
+              <span class="setting-desc">Adjust camera field of view and tracking distance</span>
+            </div>
+            <select id="setting-camera-distance" class="select-control">
+              <option value="cinematic">Cinematic Close (42° FOV)</option>
+              <option value="normal" selected>Normal Combat (48° FOV)</option>
+              <option value="far">Tactical Wide (56° FOV)</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label for="setting-damage-numbers" class="setting-label">Floating Combat Text</label>
+              <span class="setting-desc">Display damage values and healing numbers</span>
+            </div>
+            <label class="toggle-control">
+              <input type="checkbox" id="setting-damage-numbers" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </section>
+
+        <!-- Controls Tab -->
+        <section id="tab-controls" class="settings-tab-pane">
+          <div class="controls-guide-grid">
+            <div class="guide-item"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Move Avatar</span></div>
+            <div class="guide-item"><kbd>SPACE</kbd><span>Ninja Jump (Launch, Air Loop, Land)</span></div>
+            <div class="guide-item"><kbd>CLICK</kbd> / <kbd>J</kbd><span>Sword Combo (A, B, C, Heavy & Regular Flurry)</span></div>
+            <div class="guide-item"><kbd>Q</kbd> / <kbd>R-CLICK</kbd><span>Trishul Block (-75% Damage Guard)</span></div>
+            <div class="guide-item"><kbd>SHIFT</kbd><span>Sword / Shield Dash Evade</span></div>
+            <div class="guide-item"><kbd>E</kbd><span>Prana Pulse (Shield Blast AoE)</span></div>
+            <div class="guide-item"><kbd>C</kbd><span>Slide Maneuver (while moving)</span></div>
+            <div class="guide-item"><kbd>F</kbd><span>Melee Hook Punch</span></div>
+            <div class="guide-item"><kbd>V</kbd><span>Triumphant Cheer Emote</span></div>
+            <div class="guide-item"><kbd>ESC</kbd> / <kbd>P</kbd><span>Pause / Resume Journey</span></div>
+            <div class="guide-item"><kbd>M</kbd><span>Quick Mute Sound</span></div>
+            <div class="guide-item"><kbd>R</kbd><span>Restart Rite (on victory/pause)</span></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Action Footer -->
+      <footer class="settings-footer">
+        <button id="settings-reset-btn" class="settings-btn-secondary">RESET DEFAULTS</button>
+        <button id="settings-close-btn" class="settings-btn-primary">APPLY & CLOSE</button>
+      </footer>
+    </div>
+  </div>
+
+</body>
+</html>

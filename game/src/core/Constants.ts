@@ -1,0 +1,29 @@
+export const GAME_WIDTH = 1920;
+export const GAME_HEIGHT = 1080;
+
+export const DEPTH = {
+  FAR_BACKGROUND: 0,
+  PARALLAX_MIDGROUND: 50,
+  FLOOR_BASE: 100,
+  FLOOR_CARPET: 150,
+  Y_SORT_OFFSET: 1000,
+  FOREGROUND_PROPS: 6000,
+  UI_LAYER: 9000,
+};
+
+export const PALETTE = {
+  BURNT_ORANGE: 0xd97706,
+  ANTIQUE_GOLD: 0xf59e0b,
+  DEEP_BROWN: 0x451a03,
+  CHARCOAL_BLACK: 0x0f0e0e,
+  MUTED_RED: 0x991b1b,
+  TERRACOTTA: 0x9a3412,
+  WARM_AMBER: 0xfbbf24,
+};
+
+export const PLAYER_CONFIG = {
+  BASE_SPEED: 320,
+  ACCELERATION: 1800,
+  DECELERATION: 1400,
+  ISOMETRIC_ANGLE_RATIO: 0.5, // 2:1 isometric ratio for natural 2.5D visual movement
+};

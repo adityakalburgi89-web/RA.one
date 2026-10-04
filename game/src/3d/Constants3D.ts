@@ -1,0 +1,51 @@
+import * as THREE from 'three';
+
+export const COLORS = {
+  FOG: 0x10251d,
+  AMBIENT: 0x254632,
+  KEY_LIGHT: 0xcfe6c6,
+  TORCH_FIRE: 0xf59e0b,
+  BURNT_ORANGE: 0xb86c24,
+  ANTIQUE_GOLD: 0xfbbf24,
+  STONE_DARK: 0x1c2922,
+  STONE_HIGHLIGHT: 0x526052,
+  STONE_MID: 0x566554,
+  STONE_LIGHT: 0x78816b,
+  MOSS_STONE: 0x53633f,
+  EARTH: 0x172016,
+  CLEARING: 0x2c3320,
+  MOSS_DARK: 0x1d3828,
+  RIVER: 0x196474,
+  RIVER_GLOW: 0x0b5b65,
+  RIVER_BANK: 0x253928,
+  TRUNK_DARK: 0x3c2418,
+  TRUNK_LIGHT: 0x5b3821,
+  LEAF_DARK: 0x173c2a,
+  LEAF_MID: 0x2d6836,
+  LEAF_LIGHT: 0x5a853c,
+  BAMBOO: 0x607b37,
+  FERN: 0x426b32,
+  VINE: 0x355b2d,
+  BRONZE: 0x714221,
+  LOTUS_GOLD: 0xf2c45a,
+  IDOL_GLOW: 0x9be784,
+  FIREFLY: 0xe7ff92,
+  FALLEN_LEAF: 0xc6ab50,
+  MIST: 0xd1ead4,
+};
+
+export const PLAYER_3D_CONFIG = {
+  SPEED: 8.5,
+  ACCELERATION: 40.0,
+  DECELERATION: 30.0,
+  LEVEL_RADIUS: 30,
+  SPRITE_HEIGHT: 3.2,
+  SPRITE_WIDTH: 2.2,
+};
+
+export const CAMERA_CONFIG = {
+  FOV: 42,
+  OFFSET: new THREE.Vector3(0, 11, 14), // Isometric elevated angle looking down at player
+  LOOK_OFFSET: new THREE.Vector3(0, 1.2, 0),
+  LERP_SPEED: 0.08,
+};
